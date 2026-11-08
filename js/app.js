@@ -2,6 +2,7 @@
   const $ = (id) => document.getElementById(id);
   const SESSION_KEY = 'justdoit.user';
   const STATUS_LABEL = { PENDING: 'Pendiente', INPROGRESS: 'En progreso', DONE: 'Hecha' };
+  const NEXT_STATUS = { PENDING: 'INPROGRESS', INPROGRESS: 'DONE' };
 
   let currentUser = null;
   let users = [];
@@ -184,11 +185,18 @@
     shown.forEach((t) => {
       const select = el('select', { 'aria-label': 'Cambiar estado' },
         Object.entries(STATUS_LABEL).map(([v, l]) => el('option', { value: v }, l)));
+      const next = NEXT_STATUS[t.status];
       select.value = t.status;
       select.onchange = () => guard(async () => {
         await Api.tasks.update(targetUserId(), t.id, { status: select.value });
         await loadTasks();
       });
+      const botonAvanzar = next
+          ? el('button', { class: 'btn primary small', onclick: () => guard(async () => {
+              await Api.tasks.update(targetUserId(), t.id, { status: next});
+              await loadTasks();
+            }) }, 'Avanzar')
+          : [];
       list.append(el('article', { class: 'card task ' + t.status },
         el('div', { class: 'row' }, el('span', { class: 'badge ' + t.status }, STATUS_LABEL[t.status] || t.status),
           el('span', { class: 'meta' }, '#' + t.id)),
@@ -196,6 +204,7 @@
         el('div', { class: 'meta' }, 'Límite: ' + (t.deadline || '-') + ' · Creada: ' + fmtDate(t.createdAt)),
         select,
         el('div', { class: 'row' },
+            botonAvanzar,
           el('button', { class: 'btn ghost small', onclick: () => openTaskDialog(t) }, 'Editar'),
           el('button', { class: 'btn danger small', onclick: () => deleteTask(t) }, 'Eliminar'))));
     });
